@@ -1,4 +1,4 @@
-export function breadPhysics() {
+function breadPhysics() {
   if(!document.querySelector('#about')) return
 
   // Utility to load an image through javascript
