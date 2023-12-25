@@ -1,7 +1,7 @@
 function breadPhysics() {
   if(!document.querySelector('#about')) return
 
-  // Utility to load an image through javascript
+  // UTILITY TO LOAD AN IMAGE THROUGH JAVASCRIPT
   // ===========================================
 
   const loadImage = (url, onSuccess) => {
@@ -11,12 +11,42 @@ function breadPhysics() {
     img.src = url
   }
 
-  // Matter.js logic
+
+  // THROTTLING TO IMPROVE RESIZE HANDLER PERFORMANCE
+  // ================================================
+  
+  function throttler({ delay = 200, update, onlyAtEnd = false }) {
+    let elapsedTime = 0, 
+      timer = 0;
+    
+    return () => {
+      let firstTime = true, 
+        currentTime = performance.now();
+      
+      if((elapsedTime && currentTime < elapsedTime + delay) || firstTime) {
+        firstTime = false
+        clearTimeout(timer)
+        timer = setTimeout(() => {
+          // do something when user has stopped resizing or scrolling
+          elapsedTime = currentTime
+          update()
+        }, delay)
+      } else {
+        elapsedTime = currentTime
+        if(!onlyAtEnd) {
+          firstTime = false
+          update()
+        }
+      }
+    }
+  }
+
+  // MATTER.JS LOGIC
   // ===============
 
   const container = document.querySelector('#matter-container')
-  const CW = container.clientWidth
-  const CH = container.clientHeight
+  let CW = container.clientWidth
+  let CH = container.clientHeight
   const THICCNESS = 60
 
   // module aliases
@@ -32,20 +62,20 @@ function breadPhysics() {
 
   // create a renderer
   const render = Render.create({
-      element: container,
-      engine: engine, 
-      options: {
-        width: CW,
-        height: CH,
-        background: "transparent",
-        wireframes: false,
-      }
+    element: container,
+    engine: engine, 
+    options: {
+      width: CW,
+      height: CH,
+      background: "transparent",
+      wireframes: false,
+    }
   })
 
   // CREATE BOUNDS (WALLS, GROUND)
   // =============================
 
-  const ground = Bodies.rectangle(CW / 2, CH + THICCNESS / 2 + 1, 27184, THICCNESS, { isStatic: true });
+  const ground = Bodies.rectangle(CW / 2, CH + THICCNESS / 2 + 1, 27184, THICCNESS, { isStatic: true })
   const leftWall = createWall(0 - THICCNESS / 2 - 1)
   const rightWall = createWall(CW + THICCNESS / 2 + 1)
 
@@ -223,18 +253,22 @@ function breadPhysics() {
     }, 1500)
   }
 
-  function handleResize(container) {
+  function handleResize() {
+    CW = container.clientWidth
+    CH = container.clientHeight
+
     // set canvas size to new values
     render.canvas.width = CW
     render.canvas.height = CH
 
     // reposition ground and wall (left stays at 0 so no effect of resizing)
     // Tutorial didn't know how to create the width of ground equal to viewport width so he is setting it to a ridiculously large value
-    Matter.Body.setPosition(ground, Matter.Vector.create(CW / 2, CH + THICCNESS / 2))
-    Matter.Body.setPosition(rightWall, Matter.Vector.create(CW + THICCNESS / 2, CH / 2))
+    Matter.Body.setPosition(ground, Matter.Vector.create(CW / 2, CH + THICCNESS / 2 + 1))
+    Matter.Body.setPosition(rightWall, Matter.Vector.create(CW + THICCNESS / 2 + 1, CH / 2))
   }
 
-  window.addEventListener('resize', () => handleResize(container))
+  const throttleUpdate = throttler({ update: handleResize, onlyAtEnd: true })
+  window.addEventListener('resize', throttleUpdate)
 }
 
 breadPhysics()
